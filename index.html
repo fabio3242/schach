@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schachcomputer – Meine Datenbank</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0f1117"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" crossorigin="anonymous"></script>
+<style>
+:root{--bg:#0f1117;--p:#181b24;--p2:#232837;--tx:#e8eaf0;--mu:#9aa3b5;--ac:#5b8cff;--ok:#38c172;--wa:#f0b429;--er:#ef5350;--l:#e3d3b0;--d:#8b6a4a;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--p);border-bottom:1px solid #2b3042}
+h1{font-size:1.1rem;margin:0}
+.pill{font-size:.78rem;color:var(--mu);background:var(--p2);padding:4px 10px;border-radius:99px}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px}
+button,select,input,textarea{font:inherit;color:var(--tx)}
+button{background:var(--p2);border:1px solid #333a50;border-radius:10px;padding:8px 14px;cursor:pointer;transition:transform .12s,background .15s}
+button:hover{background:#2c3247}button:active{transform:scale(.96)}
+button.on,button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.big{font-weight:700;padding:10px 18px}
+input,select,textarea{background:#12151d;border:1px solid #333a50;border-radius:8px;padding:8px;width:100%}
+textarea{min-height:80px;font-family:ui-monospace,monospace}
+.tab{padding:6px 14px 30px;max-width:1100px;margin:0 auto}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;justify-content:center}
+.card{background:var(--p);border:1px solid #2b3042;border-radius:14px;padding:12px}
+.side{flex:1 1 280px;max-width:520px;display:flex;flex-direction:column;gap:10px}
+.board{position:relative;--s:min(calc(92vw - 32px),560px);width:var(--s);height:var(--s);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border-radius:8px;overflow:hidden;box-shadow:0 10px 40px #0009;user-select:none}
+.sq{position:relative;display:flex;align-items:center;justify-content:center}
+.sq.l{background:var(--l)}.sq.d{background:var(--d)}
+.sq[data-rk]::before{content:attr(data-rk);position:absolute;left:3px;top:1px;font-size:.62rem;opacity:.6;color:#222}
+.sq[data-fl]::after{content:attr(data-fl);position:absolute;right:3px;bottom:0;font-size:.62rem;opacity:.6;color:#222}
+.sq.last{box-shadow:inset 0 0 0 100px #ffe06644}.sq.sel{box-shadow:inset 0 0 0 100px #5b8cff88}
+.sq.tgt::before{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:#1a1a1a55}
+.sq.chk{box-shadow:inset 0 0 0 100px #ef535088}
+.pc{font-size:calc(var(--s)/8*.8);line-height:1;cursor:grab;animation:pop .16s ease-out;position:relative;z-index:1}
+.pc.w{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 4px #000}
+.pc.b{color:#17171c;text-shadow:0 0 1px #fff,0 0 3px #fff6}
+@keyframes pop{from{transform:scale(.75)}to{transform:scale(1)}}
+.turn{padding:10px 12px;border-radius:10px;font-weight:700;border-left:6px solid;background:var(--p2)}
+.evbar{width:24px;flex:none;display:flex;flex-direction:column;justify-content:flex-end;background:#2a2d38;border-radius:6px;overflow:hidden;position:relative}.evbar[hidden]{display:none}#evW{background:#f2f2f2;height:50%;transition:height .5s}#evT{position:absolute;left:0;right:0;font-size:.62rem;text-align:center;font-weight:700}
+.turn.w{border-color:#fff}.turn.b{border-color:#555}.turn.end{border-color:var(--wa)}
+.m{padding:8px 10px;border-radius:8px;margin-bottom:6px;background:var(--p2);border-left:4px solid var(--mu);animation:pop .2s}
+.m.ok{border-color:var(--ok)}.m.er{border-color:var(--er)}.m.wa{border-color:var(--wa)}.m.info{border-color:var(--ac)}
+.ok{color:var(--ok)}.wa{color:var(--wa)}.er{color:var(--er)}.mu{color:var(--mu);font-size:.85rem}
+code{font-family:ui-monospace,monospace;font-size:.8rem;word-break:break-all;display:block;margin:4px 0}
+#moves{max-height:190px;overflow:auto}
+.mr{display:grid;grid-template-columns:34px 1fr 1fr;padding:2px 4px}.mr:nth-child(odd){background:#ffffff08}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pal button{font-size:1.5rem;padding:2px 8px;line-height:1.3}
+.pal button.on{outline:2px solid var(--ac);background:var(--p2)}
+.pal .w{color:#fff;text-shadow:0 0 2px #000}.pal .b{color:#111;text-shadow:0 0 2px #fff}
+.ent{margin-bottom:10px}
+.chip{display:inline-flex;gap:4px;align-items:center;background:var(--p2);border-radius:8px;padding:3px 4px 3px 8px;margin:2px;font-size:.85rem}
+.chip.pref{outline:1px solid var(--wa)}.chip button{padding:0 6px;border-radius:6px}
+label{display:block;font-size:.85rem;color:var(--mu);margin:8px 0 3px}
+.chk2{display:inline-flex;gap:4px;align-items:center;margin-right:10px;color:var(--tx)}.chk2 input{width:auto}
+#promo{display:flex;gap:6px}#promo[hidden]{display:none}#promo button{font-size:1.6rem}
+</style></head><body>
+<header><h1>♞ Mein Schachcomputer</h1><span class="pill" id="dbs"></span></header>
+<nav>
+<button data-t="Game" class="on">Spielen</button>
+<button data-t="Ed" class="pri big">Datenbank bearbeiten</button>
+<button data-t="Man">Datenbank-Übersicht</button>
+</nav>
+
+<section class="tab" id="tGame">
+<div class="wrap">
+ <div><div style='display:flex;gap:8px;align-items:stretch'><div id='evBar' class='evbar' hidden><div id='evW'></div><span id='evT'></span></div><div class='board' id='gBoard'></div></div><div class='card' style='margin-top:12px;max-width:560px'><div class='row'><input id='opQ' placeholder='Openings suchen (Name, ECO-Code, Zug) …' style='flex:1;min-width:150px'><button id='catNet'>ECO-Katalog laden</button></div><div class='row' style='margin-top:6px'><span class='mu'>oder TSV-Dateien (a–e) wählen:</span><input type='file' id='catFile' multiple accept='.tsv,.txt' style='width:auto'></div><div class='mu' id='catMsg'></div><div id='opList'></div></div></div>
+ <div class="side">
+  <div class="turn" id="turn"></div>
+  <div id="promo" hidden></div>
+  <div class="card" id="qePanel" hidden><b>⚡ Schnellbearbeitung</b><div class="mu" id="qeHint"></div><div id='qeList' style='margin-top:8px'></div><label>Opening-Name (optional)</label><input id='qeName' placeholder='z. B. King’s Pawn Opening'><div class="row" style="margin-top:8px"><button class="pri" id="qeSave">Speichern</button><button id="qeUndo">Letzten Zug zurück</button><button id="qeCancel">Abbrechen</button></div></div>
+  <div id="msgs"></div>
+  <div class='card'><label class='chk2'><input type='checkbox' id='sfOn'>♟ Stockfish 19: besten Zug als Pfeil zeigen (nur Hinweis)</label><select id='sfT' style='width:auto;margin-left:6px'><option value=1500>1,5 s</option><option value=3000 selected>3 s</option><option value=10000>10 s</option><option value=30000>30 s</option></select><div class='mu' id='sfOut'></div></div>
+  <div class="card" id="pinfo"></div>
+  <div class="card"><div class="mu">Zugliste</div><div id="moves"></div></div>
+  <div class='card'><div class='row'><label class='chk2'>Ich spiele <select id='meSel' style='width:auto'><option value='w'>Weiß</option><option value='b'>Schwarz</option></select></label></div><label>Opening üben (optional)</label><select id='opSel'><option value=''>– kein Opening (normale Datenbank) –</option></select><div class='mu'>Gilt ab der nächsten „Neue Partie“.</div></div><div class='row'><button class='pri' id='newG'>Neue Partie</button><button id="undoG">Zug zurück</button><button id="openEd">Stellung im Editor öffnen</button><button class="pri" id="qeBtn">⚡ Schnell bearbeiten</button></div>
+ </div>
+</div>
+</section>
+
+<section class="tab" id="tEd" hidden>
+<div class="wrap">
+ <div>
+  <div class="board" id="eBoard"></div>
+  <div class="pal row" id="pal" style="margin-top:10px"></div>
+ </div>
+ <div class="side">
+  <div class="card">
+   <div class="row">
+    <label class="chk2">Am Zug <select id="edTurn" style="width:auto"><option value="w">Weiß</option><option value="b">Schwarz</option></select></label>
+    <button id="edStart">Startstellung / Zurücksetzen</button><button id="edClear">Brett leeren</button>
+   </div>
+   <label>Rochaderechte</label>
+   <span class="chk2"><input type="checkbox" id="cK">Weiß kurz</span><span class="chk2"><input type="checkbox" id="cQ">Weiß lang</span><span class="chk2"><input type="checkbox" id="ck">Schwarz kurz</span><span class="chk2"><input type="checkbox" id="cq">Schwarz lang</span>
+   <label>En-passant-Feld (z. B. e3 oder -)</label><input id="edEp" value="-" style="max-width:110px">
+   <label>FEN</label><input id="fenIn" placeholder="FEN einfügen …">
+   <div class="row" style="margin-top:6px"><button id="fenLoad">FEN laden</button><button id="fenOut">Als FEN exportieren</button></div>
+   <div class="er" id="edErr"></div>
+   <div class="mu" style="margin-top:6px">Erkennungs-Schlüssel (Figuren · Zugrecht · Rochade · en passant):</div><code id="edKey"></code>
+  </div>
+  <div class="card">
+   <label id="mvLbl">Zug in dieser Stellung</label><input id="mv1" placeholder="e2-e4">
+   <label>Weitere Zugfolge (abwechselnd, beliebig lang) – z. B. e7-e5 g1-f3 b8-c6</label><textarea id="mvSeq"></textarea>
+   <label class="chk2" style="margin-top:8px"><input type="checkbox" id="setPref" checked>Ersten Zug als bevorzugt setzen</label>
+   <div class="mu" id="edEx"></div>
+   <div class="row" style="margin-top:8px"><button class="pri big" id="save">Eintrag speichern</button></div>
+   <div id="saveMsg" style="margin-top:8px"></div>
+  </div>
+ </div>
+</div>
+</section>
+
+<section class="tab" id="tMan" hidden>
+ <div class="card" style="margin-bottom:12px">
+  <input id="search" placeholder="Stellungen suchen (FEN-Teil oder Zug, z. B. e2e4) …">
+  <div class="row" style="margin-top:8px"><button id="exp">Exportieren (JSON)</button><button id="cp">Kopieren</button><button id="imp">Aus Textfeld importieren</button><input type="file" id="file" accept=".json,application/json" style="width:auto"></div>
+  <div class='row' style='margin-top:8px'><button id='expOp'>Openings exportieren</button><button id='impOp'>Openings aus Textfeld importieren</button><button id='clr'>Normale Datenbank leeren</button></div><textarea id='io' placeholder='Export erscheint hier · zum Import JSON einfügen oder Datei wählen' style='margin-top:8px'></textarea>
+  <div id="ioMsg"></div>
+ </div>
+ <div id="mlist"></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const GLY={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const NAME={p:'Bauer',n:'Springer',b:'Läufer',r:'Turm',q:'Dame',k:'König'};
+const START='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const V=new Chess();
+
+/* ---------- Datenbank (IndexedDB) ---------- */
+let db=null,cache=new Map(),OP=new Map(),SEEDED=false,KM=null;
+const req=r=>new Promise((a,b)=>{r.onsuccess=()=>a(r.result);r.onerror=()=>b(r.error)});
+const store=m=>db.transaction('pos',m).objectStore('pos');
+async function initDB(){try{db=await new Promise((a,b)=>{const r=indexedDB.open('schachdb',2);r.onupgradeneeded=ev=>{const d=r.result,t=r.transaction;if(!d.objectStoreNames.contains('pos'))d.createObjectStore('pos',{keyPath:'key'});else if(ev.oldVersion===1)t.objectStore('pos').clear();if(!d.objectStoreNames.contains('open'))d.createObjectStore('open',{keyPath:'id'})};r.onsuccess=()=>a(r.result);r.onerror=()=>b(r.error)});const all=await req(store('readonly').getAll());cache=new Map(all.map(e=>[e.key,e]));const oa=await req(db.transaction('open','readonly').objectStore('open').getAll());OP=new Map(oa.filter(o=>!o.id.startsWith('__')).map(o=>[o.id,o]));SEEDED=oa.some(o=>o.id==='__seeded');const cg=oa.find(o=>o.id==='__catalog');if(cg){CATX=cg.items;addCat(CATX)}}catch(e){db=null}if(!SEEDED)await seed();st()}
+async function put(e){cache.set(e.key,e);if(db)try{await req(store('readwrite').put(e))}catch(x){}st()}
+async function del(k){cache.delete(k);if(db)try{await req(store('readwrite').delete(k))}catch(x){}st()}
+function st(){$('#dbs').textContent='Datenbank: '+cache.size+' Stellungen · '+(db?'dauerhaft gespeichert':'nur Arbeitsspeicher (kein dauerhafter Speicher verfügbar)')}
+
+/* ---------- vollständige Stellungs-Kennung ----------
+   Schlüssel = Figurenplatzierung + Zugrecht + Rochaderechte + en passant (nur wenn wirklich möglich).
+   Zughistorie, letzter Zug und Zugzähler fließen NICHT ein. */
+function keyOf(fen){const p=fen.trim().split(/\s+/);let ep=p[3]||'-';
+ if(ep!=='-'){const c=new Chess(fen);if(!c.moves({verbose:true}).some(m=>m.flags.includes('e')))ep='-'}
+ return p.slice(0,3).join(' ')+' '+ep}
+function VAL(fen){const p=fen.trim().split(/\s+/);if(p.length!==6)return false;const rows=p[0].split('/');
+ if((p[0].match(/K/g)||[]).length!==1||(p[0].match(/k/g)||[]).length!==1)return false;
+ if(rows.length!==8||/[pP]/.test(rows[0]+rows[7]))return false;return V.validate_fen(fen).valid}
+function descr(key,u){const p=new Chess(key+' 0 1').get(u.slice(0,2));return (p?NAME[p.type]:'Figur')+' von '+u.slice(0,2)+' nach '+u.slice(2,4)+(u[4]?' (Umwandlung in '+NAME[u[4]]+')':'')}
+function parseMoves(s){s=s.toLowerCase().replace(/weiß|weiss|schwarz/g,' ');const o=[];const re=/([a-h][1-8])\s*[-–x:]?\s*([a-h][1-8])=?([qrbn])?(?![a-h0-9])/g;let m;while((m=re.exec(s)))o.push({from:m[1],to:m[2],promo:m[3]});return o}
+
+/* ---------- Brett-Zeichnung ---------- */
+function drawBoard(el,get,onSq,hl,drag,fl){el.innerHTML='';
+ for(let i=0;i<64;i++){const r=fl?1+(i>>3):8-(i>>3),f=fl?7-(i&7):(i&7),sq='abcdefgh'[f]+r,d=document.createElement('div');
+  d.className='sq '+((f+r)%2?'d':'l')+(hl&&hl[sq]?' '+hl[sq]:'');
+  if((i&7)===0)d.dataset.rk=r;if((i>>3)===7)d.dataset.fl='abcdefgh'[f];
+  const p=get(sq);if(p){const s=document.createElement('span');s.className='pc '+p.color;s.textContent=GLY[p.type]+'\uFE0E';
+   if(drag){s.draggable=true;s.ondragstart=e=>e.dataTransfer.setData('text',sq)}d.appendChild(s)}
+  d.onclick=()=>onSq(sq);
+  if(drag){d.ondragover=e=>e.preventDefault();d.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData('text');if(from&&from!==sq){onSq(from);onSq(sq)}}}
+  el.appendChild(d)}}
+
+/* ---------- Spielen ---------- */
+let game=new Chess(),sel=null,last=null,over=false,M=[],promoCb=null,QE=null,ME='w',PR=null;
+function addM(c,t){M.push([c,t]);$('#msgs').innerHTML=M.map(([c,t])=>`<div class="m ${c}">${esc(t)}</div>`).join('')}
+function clrM(){M=[];$('#msgs').innerHTML=''}
+function rg(){
+ const hl={};if(last)last.forEach(s=>hl[s]='last');
+ if(sel){hl[sel]='sel';game.moves({square:sel,verbose:true}).forEach(m=>hl[m.to]='tgt')}
+ if(game.in_check())for(const f of 'abcdefgh')for(let r=1;r<9;r++){const p=game.get(f+r);if(p&&p.type==='k'&&p.color===game.turn())hl[f+r]='chk'}
+ drawBoard($('#gBoard'),s=>game.get(s),gClick,hl,true,ME==='b');
+ const w=game.turn()==='w';
+ $('#turn').className='turn '+(over?'end':w?'w':'b');
+ $('#turn').textContent=over?'Partie beendet':(w?'⚪ Weiß':'⚫ Schwarz')+' ist am Zug – '+(game.turn()===ME?'du':PR?'Opening-Linie':'Datenbank');
+ if(QE)$('#turn').textContent=(w?'⚪ Weiß':'⚫ Schwarz')+' ist am Zug – du ziehst von Hand (Schnellbearbeitung)';
+ const k=keyOf(game.fen()),e=cache.get(k);
+ $('#pinfo').innerHTML=`<div class="mu">Aktuelle Stellung (vollständige Kennung)</div><code>${esc(k)}</code><div class="${e?'ok':'wa'}">${e?'Datenbankeintrag für genau diese Stellung vorhanden':'Kein Eintrag für genau diese Stellung'}</div>${openingLine()}`;
+ const h=game.history();let t='';for(let i=0;i<h.length;i+=2)t+=`<div class="mr"><b>${i/2+1}.</b><span>${h[i]}</span><span>${h[i+1]||''}</span></div>`;
+ $('#moves').innerHTML=t||'<span class="mu">Noch keine Züge</span>';$('#moves').scrollTop=1e5;sfDraw()}
+function gClick(sq){if((over||(game.turn()!==ME&&!QE))||promoCb)return;
+ if(sel){const ms=game.moves({square:sel,verbose:true}).filter(m=>m.to===sq);
+  if(ms.length){if(ms[0].promotion){const from=sel;promoCb=pr=>doMove(from,sq,pr);showPromo()}else doMove(sel,sq);return}}
+ const p=game.get(sq);sel=p&&p.color===game.turn()?sq:null;rg()}
+function showPromo(){const el=$('#promo');el.hidden=false;el.innerHTML='<span class="mu">Umwandlung:</span>'+['q','r','b','n'].map(t=>`<button data-p="${t}" class="pc w" style="font-size:1.6rem">${GLY[t]}\uFE0E</button>`).join('');
+ el.onclick=e=>{const b=e.target.closest('button');if(!b)return;el.hidden=true;const cb=promoCb;promoCb=null;cb(b.dataset.p)}}
+function doMove(from,to,pr){if(QE){qeMove(from,to,pr);return}
+ clrM();const key=keyOf(game.fen());
+ if(PR){const ex=PR.n.moves[game.history().length];if(ex&&from+to+(pr||'')!==ex){addM('er','Falscher Zug für „'+PR.n.name+'“.');addM('wa','Richtig wäre: '+descr(key,ex)+'.');sel=null;rg();return}}
+ const e=PR?null:cache.get(key);
+ const fenBefore=key,u=from+to+(pr||'');
+ game.move({from,to,promotion:pr});sel=null;last=[from,to];
+ if(PR)addM('ok','Richtig – das ist der Zug der Opening-Linie.');else if(!e||!e.moves.length)addM('info','Für diese Stellung ist noch kein Datenbankeintrag vorhanden.');
+ else if(u===e.pref)addM('ok','Richtig! Du hast den gespeicherten besten Zug gespielt.');
+ else{addM('er','Das war nicht der gespeicherte beste Zug.');addM('wa','Gespeicherter bester Zug: '+descr(fenBefore,e.pref)+'.')}
+ if(PR&&game.history().length>=PR.n.moves.length){addM('ok','Opening „'+PR.n.name+'“ komplett – gut gemacht! Ab jetzt zählt wieder nur die normale Datenbank.');PR=null}chkEnd();rg();if(!over)setTimeout(reply,500)}
+function chkEnd(){if(game.in_checkmate()){over=true;addM(game.turn()==='b'?'ok':'er','Schachmatt! '+(game.turn()==='b'?'Weiß':'Schwarz')+' gewinnt.')}
+ else if(game.in_stalemate()){over=true;addM('wa','Patt – unentschieden.')}
+ else if(game.in_draw()){over=true;addM('wa','Remis.')}}
+function prReply(){const i=game.history().length,u=PR.n.moves[i];if(!u){PR=null;reply();return}
+ const m=game.moves({verbose:true}).find(x=>x.from===u.slice(0,2)&&x.to===u.slice(2,4)&&(x.promotion||'')===(u[4]||''));
+ if(!m){addM('er','Die Opening-Linie ist hier nicht abspielbar.');PR=null;rg();return}
+ const key=keyOf(game.fen());game.move({from:m.from,to:m.to,promotion:m.promotion});last=[m.from,m.to];
+ addM('info',(m.color==='w'?'Weiß':'Schwarz')+' spielt (Opening-Linie): '+descr(key,u)+'.');
+ if(game.history().length>=PR.n.moves.length){addM('ok','Opening „'+PR.n.name+'“ komplett. Ab jetzt zählt wieder nur die normale Datenbank.');PR=null}
+ chkEnd();rg();if(!over&&!PR&&game.turn()!==ME)setTimeout(reply,500)}
+function reply(){if(QE||over||game.turn()===ME)return;if(PR){prReply();return}
+ const key=keyOf(game.fen()),e=cache.get(key);
+ if(!e||!e.moves.length){addM('wa','Keine gespeicherte Antwort für diese genaue Stellung vorhanden.');rg();return}
+ const u=e.pref,m=game.moves({verbose:true}).find(x=>x.from===u.slice(0,2)&&x.to===u.slice(2,4)&&(x.promotion||'')===(u[4]||''));
+ if(!m){addM('er','Der gespeicherte Zug '+u+' ist in dieser Stellung nicht legal. Bitte den Eintrag korrigieren.');rg();return}
+ game.move({from:m.from,to:m.to,promotion:m.promotion});last=[m.from,m.to];
+ addM('info',(m.color==='w'?'Weiß':'Schwarz')+' spielt (aus deiner Datenbank): '+descr(key,u)+'.');chkEnd();rg()}
+function newGame(){if(QE)qeEnd(false);game=new Chess();sel=null;last=null;over=false;promoCb=null;$('#promo').hidden=true;clrM();ME=$('#meSel').value;const oid=$('#opSel').value;PR=oid&&OP.get(oid)?{n:OP.get(oid)}:null;
+ addM('info','Neue Partie – du spielst '+(ME==='w'?'Weiß':'Schwarz')+(PR?'. Übungs-Opening: '+PR.n.name:'.'));rg();if(game.turn()!==ME)setTimeout(reply,500)}
+$('#newG').onclick=newGame;
+$('#undoG').onclick=()=>{if(QE||!game.history().length)return;game.undo();if(game.turn()!==ME)game.undo();over=false;sel=null;last=null;clrM();rg();if(game.turn()!==ME)setTimeout(reply,400)};
+$('#openEd').onclick=()=>{loadEd(game.fen());setCtl();tab('Ed')};
+
+/* ---------- Schnellbearbeitung: Zielstellung = aktuelle Partie, Züge von Hand ---------- */
+function qeRender(){const side=game.turn()==='w'?'Weiß':'Schwarz';
+ $('#qeHint').textContent='Spiele jetzt von Hand den Zug für '+side+' (Klick oder Drag-and-drop). Danach den nächsten Zug, z. B. erst Schwarz, dann dein bester Zug für Weiß. Ohne Namen: Jeder Zug wird für genau seine Stellung in die normale Datenbank gespeichert (als bevorzugt). Mit Opening-Namen: die ganze Zugfolge ab Brettanfang wird nur als Opening gespeichert, nicht in die normale Datenbank.';
+ $('#qeList').innerHTML=QE.plan.map(([k,u],i)=>`<div class="m ${k.split(' ')[1]==='w'?'info':'wa'}">${i+1}. ${k.split(' ')[1]==='w'?'Weiß':'Schwarz'}: ${esc(descr(k,u))} (${u})</div>`).join('')}
+function qeMove(from,to,pr){const key=keyOf(game.fen());game.move({from,to,promotion:pr});QE.plan.push([key,from+to+(pr||'')]);sel=null;last=[from,to];qeRender();rg()}
+async function qeEnd(save){if(!QE)return;const q=QE,nm=$('#qeName').value.trim();
+ if(save&&nm){const pre=q.saved.history({verbose:true}).map(m=>m.from+m.to+(m.promotion||'')),line=pre.concat(q.plan.map(p=>p[1]));if(line.length)await putOp({id:line.join(' '),name:nm,moves:line})}
+ else if(save)for(const [key,u] of q.plan){let e=cache.get(key);e=e?{...e,moves:[...e.moves]}:{key,fen:key+' 0 1',moves:[]};if(!e.moves.includes(u))e.moves.push(u);e.pref=u;await put(e)}
+ game=q.saved;over=q.over;QE=null;sel=null;last=null;promoCb=null;$('#promo').hidden=true;$('#qePanel').hidden=true;clrM();
+ if(save)addM('ok',nm?'Opening gespeichert: '+nm:q.plan.length+' Eintrag/Einträge gespeichert.');
+ $('#qeName').value='';opRender();rg();if(save&&!nm&&!over&&game.turn()!==ME)setTimeout(reply,300)}
+$('#qeBtn').onclick=()=>{if(QE)return;QE={saved:game,over,plan:[]};game=new Chess(game.fen());over=false;sel=null;last=null;promoCb=null;$('#promo').hidden=true;$('#qePanel').hidden=false;clrM();rg();qeRender()};
+$('#qeSave').onclick=()=>qeEnd(true);$('#qeCancel').onclick=()=>qeEnd(false);
+$('#qeUndo').onclick=()=>{if(!QE||!QE.plan.length)return;game.undo();QE.plan.pop();sel=null;last=null;qeRender();rg()};
+
+/* ---------- Editor ---------- */
+let ed={b:{},turn:'w',c:{K:1,Q:1,k:1,q:1},ep:'-'},tool='wp';
+function loadEd(fen){const p=fen.trim().split(/\s+/);ed.b={};
+ p[0].split('/').forEach((row,i)=>{let f=0;for(const ch of row){if(/\d/.test(ch))f+=+ch;else{ed.b['abcdefgh'[f]+(8-i)]={type:ch.toLowerCase(),color:ch===ch.toUpperCase()?'w':'b'};f++}}});
+ ed.turn=p[1]||'w';const ca=p[2]||'-';ed.c={K:ca.includes('K'),Q:ca.includes('Q'),k:ca.includes('k'),q:ca.includes('q')};ed.ep=p[3]||'-'}
+function setCtl(){$('#edTurn').value=ed.turn;for(const k of['K','Q','k','q'])$('#c'+k).checked=!!ed.c[k];$('#edEp').value=ed.ep}
+function readCtl(){ed.turn=$('#edTurn').value;for(const k of['K','Q','k','q'])ed.c[k]=$('#c'+k).checked;ed.ep=($('#edEp').value.trim().toLowerCase())||'-'}
+function edFen(){let s='';for(let r=8;r>=1;r--){let n=0;for(const f of 'abcdefgh'){const p=ed.b[f+r];if(p){if(n){s+=n;n=0}s+=p.color==='w'?p.type.toUpperCase():p.type}else n++}if(n)s+=n;if(r>1)s+='/'}
+ const B=ed.b,h=(q,t,c)=>B[q]&&B[q].type===t&&B[q].color===c;let c='';
+ if(ed.c.K&&h('e1','k','w')&&h('h1','r','w'))c+='K';if(ed.c.Q&&h('e1','k','w')&&h('a1','r','w'))c+='Q';
+ if(ed.c.k&&h('e8','k','b')&&h('h8','r','b'))c+='k';if(ed.c.q&&h('e8','k','b')&&h('a8','r','b'))c+='q';
+ return s+' '+ed.turn+' '+(c||'-')+' '+ed.ep+' 0 1'}
+function er(){const fen=edFen(),ok=VAL(fen);
+ drawBoard($('#eBoard'),s=>ed.b[s],edClick,{},false);
+ $('#edKey').textContent=ok?keyOf(fen):'';
+ $('#edErr').textContent=ok?'':'Stellung noch ungültig: je genau ein König, keine Bauern auf Reihe 1/8, gültiges En-passant-Feld.';
+ const e=ok&&cache.get(keyOf(fen));
+ $('#edEx').innerHTML=e?'Für diese Stellung gespeichert: '+e.moves.map(m=>esc(m)+(m===e.pref?' ★':'')).join(', '):(ok?'Für diese Stellung gibt es noch keinen Eintrag.':'');
+ $('#mvLbl').textContent=ed.turn==='w'?'Bester Zug für Weiß in dieser Stellung (z. B. e2-e4)':'Antwort für Schwarz in dieser Stellung (z. B. e7-e5)'}
+function edClick(sq){if(tool==='x')delete ed.b[sq];else{const c=ed.b[sq];if(c&&c.color===tool[0]&&c.type===tool[1])delete ed.b[sq];else ed.b[sq]={color:tool[0],type:tool[1]}}er()}
+function pal(){$('#pal').innerHTML=['w','b'].map(c=>['k','q','r','b','n','p'].map(t=>`<button class="${c} ${tool===c+t?'on':''}" data-t="${c+t}">${GLY[t]}\uFE0E</button>`).join('')).join('')+`<button class="${tool==='x'?'on':''}" data-t="x" style="font-size:1rem">Entfernen</button>`}
+$('#pal').onclick=e=>{const b=e.target.closest('button');if(b){tool=b.dataset.t;pal()}};
+['edTurn','cK','cQ','ck','cq'].forEach(i=>$('#'+i).onchange=()=>{readCtl();er()});$('#edEp').oninput=()=>{readCtl();er()};
+$('#edStart').onclick=()=>{loadEd(START);setCtl();er()};
+$('#edClear').onclick=()=>{ed.b={};ed.c={K:0,Q:0,k:0,q:0};ed.ep='-';setCtl();er()};
+$('#fenLoad').onclick=()=>{let p=$('#fenIn').value.trim().split(/\s+/);if(p.length===4)p=p.concat(['0','1']);const f=p.join(' ');
+ if(!VAL(f)){$('#edErr').textContent='Diese FEN ist ungültig.';return}loadEd(f);setCtl();er()};
+$('#fenOut').onclick=()=>{const f=edFen();if(!VAL(f)){er();return}$('#fenIn').value=f;try{navigator.clipboard.writeText(f)}catch(x){}};
+$('#save').onclick=async()=>{const sm=$('#saveMsg'),fen=edFen();
+ const bad=t=>sm.innerHTML=`<div class="m er">${esc(t)}</div>`;
+ if(!VAL(fen))return bad('Die Stellung ist ungültig.');
+ const toks=parseMoves($('#mv1').value+' '+$('#mvSeq').value);
+ if(!toks.length)return bad('Bitte mindestens einen Zug angeben (z. B. e2-e4).');
+ const c=new Chess(fen),plan=[];
+ for(let i=0;i<toks.length;i++){const t=toks[i],key=keyOf(c.fen());let m=c.move({from:t.from,to:t.to,promotion:t.promo});
+  if(!m&&!t.promo){m=c.move({from:t.from,to:t.to,promotion:'q'});if(m)t.promo='q'}
+  if(!m)return bad('Zug '+(i+1)+' ('+t.from+'-'+t.to+') ist in der jeweiligen Stellung nicht legal. Nichts wurde gespeichert.');
+  plan.push([key,t.from+t.to+(t.promo||'')])}
+ plan.forEach(([k,u],i)=>{});
+ for(let i=0;i<plan.length;i++){const [key,u]=plan[i];let e=cache.get(key);
+  if(!e)e={key,fen:key+' 0 1',moves:[u],pref:u};else{e={...e,moves:[...e.moves]};if(!e.moves.includes(u))e.moves.push(u)}
+  if(i===0&&$('#setPref').checked)e.pref=u;await put(e)}
+ sm.innerHTML=`<div class="m ok">Gespeichert: ${plan.length} Eintrag/Einträge (je Stellung der Zugfolge ein eigener Eintrag).</div>`;er()};
+
+/* ---------- Übersicht ---------- */
+function chain(key){const c=new Chess(key+' 0 1'),out=[],seen=new Set();let n=1,side=c.turn(),k=keyOf(c.fen());
+ while(cache.has(k)&&!seen.has(k)&&out.length<80){seen.add(k);const u=cache.get(k).pref,m=c.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]});
+  if(!m){out.push('⚠ '+u+' illegal');break}
+  out.push((side==='w'?n+'. ':(out.length?'':n+'… '))+m.san);if(side==='b')n++;side=side==='w'?'b':'w';k=keyOf(c.fen())}
+ return out.join(' ')||'–'}
+function rm(){const q=$('#search').value.trim().toLowerCase().replace(/-/g,'');
+ const list=[...cache.values()].filter(e=>!q||e.key.toLowerCase().includes(q)||e.moves.some(m=>m.includes(q))).sort((a,b)=>a.key.localeCompare(b.key));
+ $('#mlist').innerHTML=list.length?list.map(e=>`<div class="card ent"><code>${esc(e.key)}</code>
+ <div class="mu">${e.key.split(' ')[1]==='w'?'Weiß':'Schwarz'} am Zug</div>
+ <div>${e.moves.map(m=>`<span class="chip ${m===e.pref?'pref':''}">${esc(descr(e.key,m))} (${esc(m)})${m===e.pref?' ★':`<button data-a="pref" data-k="${esc(e.key)}" data-m="${m}" title="Als bevorzugt setzen">★</button>`}<button data-a="rm" data-k="${esc(e.key)}" data-m="${m}" title="Zug entfernen">×</button></span>`).join('')}</div>
+ <div class="row" style="margin-top:6px"><button data-a="load" data-k="${esc(e.key)}">Bearbeiten (Editor)</button><button data-a="chain" data-k="${esc(e.key)}">Zugfolge ansehen</button><button data-a="del" data-k="${esc(e.key)}">Löschen</button></div>
+ <div class="chain mu" hidden></div></div>`).join(''):'<div class="mu">Keine Einträge gefunden.</div>'}
+$('#mlist').onclick=async ev=>{const b=ev.target.closest('button');if(!b)return;const k=b.dataset.k,a=b.dataset.a,m=b.dataset.m,e=cache.get(k);
+ if(a==='load'){loadEd(k+' 0 1');setCtl();tab('Ed');return}
+ if(a==='chain'){const d=b.closest('.ent').querySelector('.chain');d.textContent=chain(k);d.hidden=!d.hidden;return}
+ if(a==='del'){if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Wirklich löschen?';return}await del(k)}
+ if(a==='pref'){await put({...e,pref:m})}
+ if(a==='rm'){const mv=e.moves.filter(x=>x!==m);if(!mv.length)await del(k);else await put({...e,moves:mv,pref:e.pref===m?mv[0]:e.pref})}
+ rm()};
+$('#search').oninput=rm;
+$('#exp').onclick=()=>{$('#io').value=JSON.stringify({format:'schachdb-1',entries:[...cache.values()]},null,1);$('#ioMsg').innerHTML='<div class="m info">Export erzeugt – mit „Kopieren“ in eine Datei einfügen und sichern.</div>'};
+$('#cp').onclick=()=>{$('#io').select();try{navigator.clipboard.writeText($('#io').value)}catch(x){}};
+async function imp(txt){const o=$('#ioMsg');try{const a=JSON.parse(txt),arr=Array.isArray(a)?a:a.entries;let n=0;
+ for(const x of arr){const p=String(x.fen||x.key).trim().split(/\s+/);if(p.length<4)continue;const fen=p.slice(0,4).join(' ')+' 0 1';if(!VAL(fen))continue;
+  const key=keyOf(fen),mv=[...new Set((x.moves||[]).filter(m=>/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(m)))];if(!mv.length)continue;
+  await put({key,fen:key+' 0 1',moves:mv,pref:mv.includes(x.pref)?x.pref:mv[0]});n++}
+ o.innerHTML=`<div class="m ok">${n} Einträge importiert.</div>`;rm()}catch(x){o.innerHTML='<div class="m er">Import fehlgeschlagen: keine gültige Datenbankdatei.</div>'}}
+$('#imp').onclick=()=>imp($('#io').value);
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('#io').value=r.result;imp(r.result)};r.readAsText(f)};
+
+/* ---------- Openings (getrennt von der normalen Datenbank) ---------- */
+const PRE=`King’s Pawn Opening|e4
+Open Game (King’s Pawn Game)|e4 e5
+Italian Game|e4 e5 Nf3 Nc6 Bc4
+Giuoco Piano|e4 e5 Nf3 Nc6 Bc4 Bc5
+Evans Gambit|e4 e5 Nf3 Nc6 Bc4 Bc5 b4
+Two Knights Defense|e4 e5 Nf3 Nc6 Bc4 Nf6
+Fried Liver Attack|e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7
+Ruy Lopez|e4 e5 Nf3 Nc6 Bb5
+Ruy Lopez: Morphy Defense|e4 e5 Nf3 Nc6 Bb5 a6
+Ruy Lopez: Closed (Main Line)|e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7
+Ruy Lopez: Exchange Variation|e4 e5 Nf3 Nc6 Bb5 a6 Bxc6
+Ruy Lopez: Berlin Defense|e4 e5 Nf3 Nc6 Bb5 Nf6
+Scotch Game|e4 e5 Nf3 Nc6 d4
+Scotch Game: Main Line|e4 e5 Nf3 Nc6 d4 exd4 Nxd4
+Petrov’s Defense|e4 e5 Nf3 Nf6
+Philidor Defense|e4 e5 Nf3 d6
+Four Knights Game|e4 e5 Nf3 Nc6 Nc3 Nf6
+King’s Gambit|e4 e5 f4
+King’s Gambit Accepted|e4 e5 f4 exf4
+King’s Gambit Declined: Classical|e4 e5 f4 Bc5
+Vienna Game|e4 e5 Nc3
+Bishop’s Opening|e4 e5 Bc4
+Sicilian Defense|e4 c5
+Sicilian: Open|e4 c5 Nf3 d6 d4 cxd4 Nxd4
+Sicilian: Najdorf|e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6
+Sicilian: Dragon|e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6
+Sicilian: Scheveningen|e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 e6
+Sicilian: Classical|e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6
+Sicilian: Sveshnikov|e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5
+Sicilian: Taimanov|e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nc6
+Sicilian: Kan|e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6
+Sicilian: Alapin|e4 c5 c3
+Sicilian: Closed|e4 c5 Nc3
+Sicilian: Smith-Morra Gambit|e4 c5 d4 cxd4 c3
+French Defense|e4 e6
+French: Advance|e4 e6 d4 d5 e5
+French: Exchange|e4 e6 d4 d5 exd5
+French: Tarrasch|e4 e6 d4 d5 Nd2
+French: Winawer|e4 e6 d4 d5 Nc3 Bb4
+French: Classical|e4 e6 d4 d5 Nc3 Nf6
+Caro-Kann Defense|e4 c6
+Caro-Kann: Advance|e4 c6 d4 d5 e5
+Caro-Kann: Classical|e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5
+Caro-Kann: Exchange|e4 c6 d4 d5 exd5 cxd5
+Caro-Kann: Panov Attack|e4 c6 d4 d5 exd5 cxd5 c4
+Pirc Defense|e4 d6 d4 Nf6 Nc3 g6
+Modern Defense|e4 g6
+Scandinavian Defense|e4 d5
+Scandinavian: Main Line|e4 d5 exd5 Qxd5
+Alekhine’s Defense|e4 Nf6
+Queen’s Pawn Opening|d4
+Queen’s Gambit|d4 d5 c4
+Queen’s Gambit Accepted|d4 d5 c4 dxc4
+Queen’s Gambit Declined|d4 d5 c4 e6
+QGD: Orthodox Defense|d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7
+QGD: Exchange|d4 d5 c4 e6 cxd5 exd5
+Slav Defense|d4 d5 c4 c6
+Semi-Slav Defense|d4 d5 c4 c6 Nf3 Nf6 Nc3 e6
+Tarrasch Defense|d4 d5 c4 e6 Nc3 c5
+Albin Counter-Gambit|d4 d5 c4 e5
+Indian Defense|d4 Nf6
+King’s Indian Defense|d4 Nf6 c4 g6 Nc3 Bg7
+KID: Classical|d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5
+KID: Sämisch|d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3
+Nimzo-Indian Defense|d4 Nf6 c4 e6 Nc3 Bb4
+Queen’s Indian Defense|d4 Nf6 c4 e6 Nf3 b6
+Bogo-Indian Defense|d4 Nf6 c4 e6 Nf3 Bb4
+Grünfeld Defense|d4 Nf6 c4 g6 Nc3 d5
+Grünfeld: Exchange|d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5 e4
+Catalan Opening|d4 Nf6 c4 e6 g3
+Benoni Defense|d4 Nf6 c4 c5 d5
+Benko Gambit|d4 Nf6 c4 c5 d5 b5
+Budapest Gambit|d4 Nf6 c4 e5
+Dutch Defense|d4 f5
+Dutch: Stonewall|d4 f5 g3 Nf6 Bg2 e6 Nf3 d5
+London System|d4 d5 Bf4
+Trompowsky Attack|d4 Nf6 Bg5
+Colle System|d4 d5 Nf3 Nf6 e3
+Torre Attack|d4 Nf6 Nf3 e6 Bg5
+English Opening|c4
+English: Symmetrical|c4 c5
+English: Reversed Sicilian|c4 e5
+English: Anglo-Indian|c4 Nf6
+Réti Opening|Nf3
+King’s Indian Attack|Nf3 d5 g3
+Bird’s Opening|f4
+Larsen’s Opening|b3
+Polish Opening|b4
+Grob Opening|g4`;
+const EXTRA=`Ponziani Opening|e4 e5 Nf3 Nc6 c3
+Latvian Gambit|e4 e5 Nf3 f5
+Elephant Gambit|e4 e5 Nf3 d5
+Danish Gambit|e4 e5 d4 exd4 c3
+Center Game|e4 e5 d4 exd4 Qxd4
+Scotch Gambit|e4 e5 Nf3 Nc6 d4 exd4 Bc4
+Göring Gambit|e4 e5 Nf3 Nc6 d4 exd4 c3
+Sicilian: Grand Prix Attack|e4 c5 f4
+Sicilian: Rossolimo|e4 c5 Nf3 Nc6 Bb5
+Sicilian: Accelerated Dragon|e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6
+French: Rubinstein|e4 e6 d4 d5 Nc3 dxe4
+French: King’s Indian Attack|e4 e6 d3
+Caro-Kann: Two Knights|e4 c6 Nc3 d5 Nf3
+Caro-Kann: Fantasy|e4 c6 d4 d5 f3
+Nimzowitsch Defense|e4 Nc6
+St. George Defense|e4 a6
+Owen’s Defense|e4 b6
+Chigorin Defense|d4 d5 c4 Nc6
+Old Indian Defense|d4 Nf6 c4 d6
+Modern Benoni: Classical|d4 Nf6 c4 c5 d5 e6 Nc3 exd5 cxd5 d6
+Dutch: Leningrad|d4 f5 g3 Nf6 Bg2 g6
+Dutch: Classical|d4 f5 c4 Nf6 g3 e6
+Veresov Attack|d4 d5 Nc3 Nf6 Bg5
+Blackmar-Diemer Gambit|d4 d5 e4
+Englund Gambit|d4 e5
+Jobava London|d4 d5 Nc3 Nf6 Bf4
+Catalan: Open|d4 Nf6 c4 e6 g3 d5 Bg2 dxc4
+English: Four Knights|c4 e5 Nc3 Nf6 Nf3 Nc6
+Bird: From’s Gambit|f4 e5
+Hungarian Opening|g3
+Amar Opening|Nh3
+Dunst Opening|Nc3`;
+const CAT=[];[[PRE,1],[EXTRA,0]].forEach(([s,pre])=>s.trim().split('\n').forEach(l=>{const [name,sans]=l.split('|'),c=new Chess(),u=[];for(const t of sans.trim().split(/\s+/)){const m=c.move(t);if(!m)return;u.push(m.from+m.to+(m.promotion||''))}CAT.push({id:u.join(' '),name:name.trim(),moves:u,pre})}));
+const opStore=m=>db.transaction('open',m).objectStore('open');
+async function putOp(o,q){OP.set(o.id,o);KM=null;if(db)try{await req(opStore('readwrite').put(o))}catch(x){}if(!q)opRender()}
+async function delOp(id){OP.delete(id);KM=null;if(db)try{await req(opStore('readwrite').delete(id))}catch(x){}opRender()}
+async function seed(){for(const c of CAT)if(c.pre)await putOp({id:c.id,name:c.name,moves:c.moves},1);if(db)try{await req(opStore('readwrite').put({id:'__seeded'}))}catch(x){}opRender()}
+function km(){if(!KM){KM=new Map();for(const n of OP.values()){const c=new Chess();for(const u of n.moves)c.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]});const k=keyOf(c.fen()),o=KM.get(k);if(!o||o.moves.length<n.moves.length)KM.set(k,n)}}return KM}
+function curOpening(){const K=km(),c=new Chess();let best=null;for(const m of game.history({verbose:true})){c.move({from:m.from,to:m.to,promotion:m.promotion});const n=K.get(keyOf(c.fen()));if(n)best=n}return best}
+function openingLine(){const n=curOpening();return n?`<div style='margin-top:6px'>📖 <b>${esc(n.name)}</b></div>`:''}
+function sanLine(ids){const c=new Chess(),o=[];ids.forEach((u,i)=>{const m=c.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]});if(m)o.push((i%2?'':(i/2+1)+'. ')+m.san)});return o.join(' ')}
+function opRender(){const q=($('#opQ')?$('#opQ').value:'').trim().toLowerCase().replace(/-/g,''),sv=$('#opSel').value,CAP=150;
+ const ns=[...OP.values()].sort((a,b)=>a.id<b.id?-1:1),st=[],D=ns.map(n=>{while(st.length&&!n.id.startsWith(st[st.length-1]+' '))st.pop();const d=st.length;st.push(n.id);return[n,d]});
+ const miss=CAT.filter(c=>!OP.has(c.id)).sort((a,b)=>a.id<b.id?-1:1);
+ const hit=x=>!q||x.name.toLowerCase().includes(q)||(x.eco||'').toLowerCase().startsWith(q)||x.moves.join('').includes(q);
+ const dd=D.filter(([n])=>hit(n)),mm=miss.filter(hit);
+ $('#opSel').innerHTML=`<option value=''>– kein Opening (normale Datenbank) –</option>`+D.map(([n,d])=>`<option value='${esc(n.id)}'>${'· '.repeat(Math.min(d,6))}${esc((n.eco?n.eco+' ':'')+n.name)}</option>`).join('');$('#opSel').value=OP.has(sv)?sv:'';
+ const wasOpen=$('#misD')&&$('#misD').open;
+ $('#opList').innerHTML=`<b>Openings</b> <span class='mu'>${ns.length} hinzugefügt · ${miss.length} fehlen · Katalog gesamt ${CAT.length}</span><div style='max-height:260px;overflow:auto;margin:6px 0'>${dd.slice(0,CAP).map(([n,d])=>`<div style='padding-left:${Math.min(d,8)*14}px'><span class='ok'>✔</span> ${n.eco?`<span class='mu'>${esc(n.eco)}</span> `:''}${esc(n.name)} <span class='mu'>${esc(sanLine(n.moves))}</span> <button data-a='oprm' data-id='${esc(n.id)}' style='padding:0 6px'>×</button></div>`).join('')||'<span class=mu>Keine Treffer.</span>'}${dd.length>CAP?`<div class='mu'>… ${dd.length-CAP} weitere (Suche verfeinern)</div>`:''}</div><details id='misD' ${wasOpen?'open':''}><summary class='wa'>Fehlende Openings (${mm.length})</summary><div style='max-height:260px;overflow:auto'>${mm.slice(0,CAP).map(c=>`<div class='mu'><span class='wa'>✘</span> ${c.eco?esc(c.eco)+' ':''}${esc(c.name)} · ${esc(sanLine(c.moves))}</div>`).join('')}${mm.length>CAP?`<div class='mu'>… ${mm.length-CAP} weitere (Suche verfeinern)</div>`:''}</div>${miss.length?`<button id='opAll' style='margin-top:6px'>Alle ${miss.length} fehlenden hinzufügen</button>`:''}</details>`}
+$('#opList').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.id==='opAll'){b.textContent='Füge hinzu …';const add=CAT.filter(c=>!OP.has(c.id)).map(c=>({id:c.id,name:c.name,moves:c.moves,eco:c.eco||''}));add.forEach(o=>OP.set(o.id,o));KM=null;
+  if(db)try{const t=db.transaction('open','readwrite'),os=t.objectStore('open');add.forEach(o=>os.put(o));await new Promise((ok,no)=>{t.oncomplete=ok;t.onerror=()=>no(t.error)})}catch(x){}
+  opRender();return}
+ if(b.dataset.a==='oprm'){if(!b.dataset.sure){b.dataset.sure=1;b.textContent='sicher?';return}await delOp(b.dataset.id)}};
+function toUci(m){const c=new Chess(),u=[],toks=(Array.isArray(m)?m:String(m).replace(/\d+\.(\.\.)?/g,' ').split(/[\s,]+/)).filter(Boolean);
+ for(const t of toks){let x=c.move(t);if(!x){const p=parseMoves(t)[0];if(p)x=c.move({from:p.from,to:p.to,promotion:p.promo})}if(!x)return null;u.push(x.from+x.to+(x.promotion||''))}return u}
+async function impOp(txt){const o=$('#ioMsg');try{const a=JSON.parse(txt),arr=Array.isArray(a)?a:a.openings;let n=0;for(const x of arr){const u=toUci(x.moves);if(!u||!u.length||!x.name)continue;await putOp({id:u.join(' '),name:String(x.name),moves:u},1);n++}opRender();o.innerHTML=`<div class='m ok'>${n} Openings importiert.</div>`}catch(x){o.innerHTML=`<div class='m er'>Import fehlgeschlagen.</div>`}}
+$('#expOp').onclick=()=>{$('#io').value=JSON.stringify({format:'schachdb-openings-1',openings:[...OP.values()].map(o=>({name:o.name,moves:o.moves.join(' ')}))},null,1);$('#ioMsg').innerHTML=`<div class='m info'>Openings exportiert (Züge im Format e2e4 e7e5 …). Import akzeptiert auch normale Notation wie „e4 e5 Nf3“.</div>`};
+$('#impOp').onclick=()=>impOp($('#io').value);
+$('#clr').onclick=async function(){if(!this.dataset.sure){this.dataset.sure=1;this.textContent='Wirklich alles leeren?';return}for(const k of [...cache.keys()])await del(k);this.dataset.sure='';this.textContent='Normale Datenbank leeren';rm()};
+
+/* ---------- Stockfish 19: nur optionaler Hinweis-Pfeil, zieht nie selbst, nie Teil der Datenbank ---------- */
+const SFURL='https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/';
+let sfP=null,sfW=null,sfKind='',sfFail=false,sfPend=0,sfFen=null,sfBest=null,sfScore='';
+function sfStart(kind){return new Promise((res,rej)=>{let w;
+ try{w=new Worker('stockfish-19'+kind+'.js')}catch(e){rej(e);return}
+ const t=setTimeout(()=>{w.terminate();rej(new Error('timeout'))},120000);
+ w.onerror=e=>{clearTimeout(t);w.terminate();rej(e)};
+ w.onmessage=e=>{if(String(e.data).startsWith('uciok')){clearTimeout(t);w.onmessage=sfMsg;res(w)}};
+ w.postMessage('uci')})}
+function sfEnsure(){if(!sfP)sfP=(async()=>{for(const k of(self.crossOriginIsolated?['','-single','-lite-single']:['-single','-lite-single'])){try{sfW=await sfStart(k);sfKind=k;if(k==='')sfW.postMessage('setoption name Threads value '+Math.min(navigator.hardwareConcurrency||2,8));sfW.postMessage('setoption name Hash value 256');return sfW}catch(e){}}sfFail=true;return null})();return sfP}
+function sfMsg(e){const l=String(e.data);
+ if(l.startsWith('info')&&l.includes(' pv ')){const m=l.match(/score (cp|mate) (-?\d+)/);if(m){sfScore=m[1]+' '+m[2];evUpdate()}}
+ else if(l.startsWith('bestmove')){sfPend--;if(sfPend>0)return;sfPend=0;const u=l.split(' ')[1];sfBest=u&&u!=='(none)'?u:null;rg()}}
+async function sfAnalyze(fen){sfFen=fen;sfBest=null;sfScore='';$('#sfOut').textContent=sfW?'Stockfish 19 rechnet …':'Stockfish 19 wird geladen …';
+ const w=await sfEnsure();
+ if(!w){$('#sfOut').textContent='⚠ Stockfish nicht gefunden: Dateien stockfish-19.js/.wasm (oder -single) neben index.html legen und die Seite über start.py öffnen.';return}
+ if(!$('#sfOn').checked)return;
+ if(sfPend>0)w.postMessage('stop');w.postMessage('position fen '+sfFen);w.postMessage('go movetime '+$('#sfT').value);sfPend++}
+function evTxt(){if(!sfScore)return'';const [k,v]=sfScore.split(' ');let n=+v;if(game.turn()==='b')n=-n;return k==='cp'?' · Bewertung '+(n>0?'+':'')+(n/100).toFixed(2)+' (aus Weiß-Sicht)':' · Matt in '+Math.abs(n)}
+function sfDraw(){const out=$('#sfOut');
+ if(!$('#sfOn').checked||over){out.textContent='';$('#evBar').hidden=true;return}$('#evBar').hidden=false;$('#evBar').style.justifyContent=ME==='b'?'flex-start':'flex-end';
+ if(sfFail)return;
+ const fen=game.fen();if(fen!==sfFen){sfAnalyze(fen);return}
+ if(!sfBest)return;
+ const u=sfBest;out.textContent='Stockfish 19 ('+({'':'Voll, Multi-Thread','-single':'Voll','-lite-single':'Lite'}[sfKind])+'): '+descr(keyOf(fen),u)+evTxt();
+ const fl=ME==='b',pt=s=>{const f='abcdefgh'.indexOf(s[0]),r=+s[1];return[(fl?7-f:f)+.5,(fl?r-1:8-r)+.5]};
+ const [x1,y1]=pt(u.slice(0,2)),[x2,y2]=pt(u.slice(2,4)),dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L,bx=x2-ux*.4,by=y2-uy*.4;
+ $('#gBoard').insertAdjacentHTML('beforeend',`<svg viewBox='0 0 8 8' style='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3'><g opacity='.85' fill='#38c172' stroke='#38c172'><line x1='${x1}' y1='${y1}' x2='${bx}' y2='${by}' stroke-width='.17' stroke-linecap='round'/><polygon points='${x2},${y2} ${bx-uy*.22},${by+ux*.22} ${bx+uy*.22},${by-ux*.22}' stroke='none'/></g></svg>`)}
+function evUpdate(){if(!sfScore||!sfFen)return;const [k,v]=sfScore.split(' ');let n=+v;if(sfFen.split(' ')[1]==='b')n=-n;
+ let pct,txt;if(k==='cp'){pct=50+50*(2/(1+Math.exp(-n/400))-1);txt=(n>0?'+':'')+(n/100).toFixed(1)}else{pct=n>0?100:0;txt=(n>0?'':'-')+'M'+Math.abs(n)}
+ $('#evW').style.height=pct+'%';const t=$('#evT'),flip=ME==='b',wa=pct>=50;t.textContent=txt;t.style.top=t.style.bottom='';t.style[wa!==flip?'bottom':'top']='3px';t.style.color=wa?'#111':'#eee'}
+$('#sfOn').onchange=()=>{const on=$('#sfOn').checked;sfFen=null;sfBest=null;if(!on&&sfW&&sfPend>0)sfW.postMessage('stop');if(on&&sfFail){sfFail=false;sfP=null}rg()};
+
+const CATSET=new Set(CAT.map(c=>c.id));let CATX=[];
+function addCat(items){let n=0;for(const c of items)if(!CATSET.has(c.id)){CATSET.add(c.id);CAT.push({...c,pre:0});n++}return n}
+async function loadCat(txt){const items=[],L=txt.split('\n');
+ for(let i=0;i<L.length;i++){const p=L[i].split('\t');if(p.length<3||p[0].trim()==='eco')continue;const u=toUci(p[2]);if(u&&u.length)items.push({id:u.join(' '),name:p[1].trim(),moves:u,eco:p[0].trim()});
+  if(i%250===0){$('#catMsg').textContent='Lese Katalog … '+Math.round(i/L.length*100)+' %';await new Promise(r=>setTimeout(r))}}
+ return items}
+async function catIngest(texts){let all=[];for(const t of texts)all=all.concat(await loadCat(t));const n=addCat(all),ids=new Set(CATX.map(c=>c.id));CATX=CATX.concat(all.filter(x=>!ids.has(x.id)));
+ if(db)try{await req(opStore('readwrite').put({id:'__catalog',items:CATX}))}catch(x){}
+ $('#catMsg').textContent=all.length+' Einträge gelesen, '+n+' neu im Katalog (gleiche Zugfolgen werden nicht doppelt geführt).';opRender()}
+$('#catFile').onchange=async e=>{const fs=[...e.target.files];if(fs.length)await catIngest(await Promise.all(fs.map(f=>f.text())))};
+$('#catNet').onclick=async()=>{$('#catMsg').textContent='Lade ECO-Katalog …';try{const T=[];for(const c of 'abcde'){const r=await fetch('https://raw.githubusercontent.com/lichess-org/chess-openings/master/'+c+'.tsv');if(!r.ok)throw 0;T.push(await r.text())}await catIngest(T)}catch(x){$('#catMsg').textContent='Online-Laden ist hier nicht möglich. Lade a.tsv bis e.tsv von github.com/lichess-org/chess-openings herunter und wähle alle 5 Dateien gleichzeitig bei „TSV-Dateien wählen“.'}};
+$('#opQ').oninput=opRender;
+$('#sfT').onchange=()=>{sfFen=null;sfBest=null;rg()};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* ---------- Tabs / Start ---------- */
+function tab(n){$$('.tab').forEach(t=>t.hidden=t.id!=='t'+n);$$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='Ed'){pal();er()}if(n==='Man')rm()}
+$$('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+loadEd(START);setCtl();newGame();st();
+initDB().then(()=>{opRender();rg();if($('#tMan').hidden===false)rm()});
+</script></body></html>

@@ -1,0 +1,36 @@
+SCHACHCOMPUTER MIT STOCKFISH 19 (VOLLVERSION) – LOKAL
+
+1. Lade diese 2 Dateien (ca. 94 MB) in DIESEN Ordner neben index.html:
+   https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19.js
+   https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19.wasm
+   (stärkste Version, mehrere Threads)
+
+   Zusätzlich empfohlen als Rückfall, falls Multi-Thread nicht läuft (ebenfalls ca. 94 MB):
+   https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19-single.js
+   https://github.com/nmrugg/stockfish.js/releases/download/v19.0.1/stockfish-19-single.wasm
+
+2. Python 3 installieren (falls nicht vorhanden), dann im Ordner starten:
+   python3 start.py        (Windows: py start.py)
+   Der Browser öffnet http://localhost:8765/index.html
+
+3. Häkchen "Stockfish 19" setzen. Das erste Laden der großen Datei dauert etwas.
+   Rechenzeit pro Stellung wählbar (1,5 / 3 / 10 / 30 Sekunden) – mehr Zeit = besserer Zug.
+
+Hinweise:
+- Immer über start.py (gleicher Port 8765) öffnen, nicht per Doppelklick auf index.html.
+- Deine Datenbank liegt im Browser dieser lokalen Adresse. Daten aus der veröffentlichten
+  Seite kommst du per Export (JSON) / Import in die lokale Version.
+- Stockfish zeigt nur einen Pfeil und zieht nie selbst; er ist nicht Teil deiner Datenbank.
+
+
+ALS APP INSTALLIEREN (PWA)
+- Ordner muss enthalten: index.html, manifest.webmanifest, sw.js, icon-192.png, icon-512.png, start.py
+  (plus die Stockfish-Dateien).
+- python start.py ausführen, in Chrome oder Edge http://localhost:8765/index.html öffnen.
+- In der Adressleiste erscheint rechts ein Installieren-Symbol (oder Menü > "App installieren").
+- Danach startest du die App über das Symbol. Sie braucht trotzdem den laufenden Server (start.py),
+  funktioniert aber nach dem ersten Laden auch offline aus dem Zwischenspeicher
+  (Stockfish-Dateien werden beim ersten Benutzen mitgespeichert).
+- Handy: localhost gilt nur am selben Gerät. Für die Installation auf dem Handy muss der Ordner
+  auf einem HTTPS-Webspace liegen (z. B. kostenloses GitHub Pages oder Netlify). Dort fehlen die
+  Header für die Multi-Thread-Engine, die Seite nimmt dann automatisch stockfish-19-single.
